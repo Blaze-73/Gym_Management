@@ -114,7 +114,7 @@ Route::middleware('auth:sanctum')->group(function() {
     });
 
     // ============================================================================
-    // 3. ADMIN ONLY ROUTES
+    // 3. ADMIN ONLY AUTH ROUTES
     // ============================================================================
     Route::middleware('role:admin')->group(function(){
         
