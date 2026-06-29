@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    'paypal' => [
+        'client_id' => trim((string) env('PAYPAL_CLIENT_ID', '')),
+        'secret' => trim((string) env('PAYPAL_SECRET', '')),
+        'mode' => env('PAYPAL_MODE', 'sandbox'),
+        'currency' => env('PAYPAL_CURRENCY', 'USD'),
+        'frontend_url' => rtrim((string) env('FRONTEND_URL', 'http://localhost:5173'), '/'),
+        'mock' => env('PAYPAL_MOCK', false),
+    ],
+
 ];

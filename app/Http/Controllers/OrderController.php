@@ -6,17 +6,20 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\OrderItem;
+use App\Services\UserNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
+    public function __construct(protected UserNotificationService $notifications) {}
+
     /**
      * Display a listing of orders
      */
     public function index(Request $request)
     {
-        $query = Order::with(['user', 'items.product']);
+        $query = Order::with(['user', 'items.product', 'payment']);
 
         // If client, show only their orders
         if ($request->user()->isClient()) {
@@ -98,7 +101,8 @@ class OrderController extends Controller
             }
 
             DB::commit();
-            Mail::to('gymadmin@gmail.com')->send(new Order\OrderConfirmed($order));
+
+            $this->notifications->notifyOrderPlaced((int) $request->user()->id, $order);
 
             return response()->json([
                 'message' => 'Order placed successfully',
@@ -139,14 +143,20 @@ class OrderController extends Controller
     public function updateStatus(Request $request, Order $order)
     {
         $validated = $request->validate([
-            'status' => 'required|in:pending,processing,completed,cancelled',
+            'status' => 'required|in:pending,shipped,delivered,processing,completed,cancelled',
         ]);
 
+        $newStatus = match ($validated['status']) {
+            'processing' => 'shipped',
+            'completed' => 'delivered',
+            default => $validated['status'],
+        };
+
         $oldStatus = $order->status;
-        $order->update(['status' => $validated['status']]);
+        $order->update(['status' => $newStatus]);
 
         // If order is cancelled, restore stock
-        if ($validated['status'] === 'cancelled' && $oldStatus !== 'cancelled') {
+        if ($newStatus === 'cancelled' && $oldStatus !== 'cancelled') {
             foreach ($order->items as $item) {
                 $item->product->increment('stock', $item->quantity);
             }
@@ -198,11 +208,11 @@ class OrderController extends Controller
         $stats = [
             'total_orders' => Order::count(),
             'pending_orders' => Order::where('status', 'pending')->count(),
-            'processing_orders' => Order::where('status', 'processing')->count(),
-            'completed_orders' => Order::where('status', 'completed')->count(),
+            'shipped_orders' => Order::whereIn('status', ['shipped', 'processing'])->count(),
+            'delivered_orders' => Order::whereIn('status', ['delivered', 'completed'])->count(),
             'cancelled_orders' => Order::where('status', 'cancelled')->count(),
-            'total_revenue' => Order::where('status', 'completed')->sum('total_amount'),
-            'pending_revenue' => Order::whereIn('status', ['pending', 'processing'])->sum('total_amount'),
+            'total_revenue' => Order::whereIn('status', ['delivered', 'completed'])->sum('total_amount'),
+            'pending_revenue' => Order::whereIn('status', ['pending', 'shipped', 'processing'])->sum('total_amount'),
         ];
 
         return response()->json([

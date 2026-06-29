@@ -28,11 +28,13 @@ class User extends Authenticatable
         'workout_reminders',
         'nutrition_alerts',
         'system_updates',
+        'attendance_qr_token',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
+        'attendance_qr_token',
     ];
 
     protected function casts(): array
@@ -60,6 +62,16 @@ class User extends Authenticatable
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
     }
 
     public function userPrograms(): HasMany
@@ -100,5 +112,25 @@ class User extends Authenticatable
     public function isClient(): bool
     {
         return $this->role === 'client';
+    }
+
+    public function isCoach(): bool
+    {
+        return $this->role === 'coach';
+    }
+
+    public function ensureAttendanceQrToken(): string
+    {
+        if ($this->attendance_qr_token) {
+            return $this->attendance_qr_token;
+        }
+
+        do {
+            $token = bin2hex(random_bytes(16));
+        } while (self::where('attendance_qr_token', $token)->exists());
+
+        $this->forceFill(['attendance_qr_token' => $token])->save();
+
+        return $token;
     }
 }

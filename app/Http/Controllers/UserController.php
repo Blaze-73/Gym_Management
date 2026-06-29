@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\Coach;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -16,9 +17,7 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $query = User::with(['memberships' => function ($q) {
-            $q->where('status', 'active')
-              ->where('end_date', '>', now())
-              ->with('plan');
+            $q->orderByDesc('created_at')->limit(1)->with('plan');
         }]);
 
         // Filter by role
@@ -35,7 +34,8 @@ class UserController extends Controller
             });
         }
 
-        $users = $query->paginate(15);
+        $perPage = min(max((int) $request->get('per_page', 50), 1), 100);
+        $users = $query->orderByDesc('created_at')->paginate($perPage);
 
         return response()->json($users);
     }
@@ -49,7 +49,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
-            'role' => 'required|in:admin,client',
+            'role' => 'required|in:admin,client,coach',
             'phone' => 'nullable|string|max:20', // Added phone here for creation
         ]);
 
@@ -57,9 +57,22 @@ class UserController extends Controller
 
         $user = User::create($validated);
 
+        if ($user->role === 'coach') {
+            Coach::firstOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'name' => $user->name,
+                    'specialization' => 'Personal Training',
+                    'is_available' => true,
+                ]
+            );
+        }
+
+        $user->load(['memberships' => fn ($q) => $q->latest()->limit(1)->with('plan'), 'coach']);
+
         return response()->json([
             'message' => 'User created successfully',
-            'user' => $user
+            'user' => $user,
         ], 201);
     }
 
@@ -93,7 +106,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'email' => ['sometimes', 'email', Rule::unique('users')->ignore($user->id)],
-            'role' => 'sometimes|in:admin,client',
+            'role' => 'sometimes|in:admin,client,coach',
             'password' => 'sometimes|string|min:8',
             'phone' => 'sometimes|string|max:20', // ✅ ADDED: Now phone can be updated
         ]);
@@ -103,6 +116,17 @@ class UserController extends Controller
         }
 
         $user->update($validated);
+
+        if ($user->role === 'coach') {
+            Coach::firstOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'name' => $user->name,
+                    'specialization' => 'Personal Training',
+                    'is_available' => true,
+                ]
+            );
+        }
 
         return response()->json([
             'message' => 'User updated successfully',

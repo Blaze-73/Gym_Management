@@ -14,6 +14,11 @@ class Order extends Model
         'order_number',
         'total_amount',
         'status',
+        'payment_status',
+        'customer_name',
+        'customer_email',
+        'customer_phone',
+        'shipping_address',
         'notes',
     ];
 
@@ -35,6 +40,11 @@ class Order extends Model
     public function items()
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function payment()
+    {
+        return $this->hasOne(Payment::class);
     }
 
     /**

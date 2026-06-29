@@ -13,6 +13,7 @@ class Coach extends Model
 
     protected $fillable = [
         'user_id',
+        'name',
         'specialization',
         'bio',
         'certifications',
@@ -50,5 +51,15 @@ class Coach extends Model
     public function clients(): HasMany
     {
         return $this->hasMany(UserCoach::class, 'coach_id');
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(CoachReview::class);
+    }
+
+    public function schedules(): HasMany
+    {
+        return $this->hasMany(Schedule::class);
     }
 }

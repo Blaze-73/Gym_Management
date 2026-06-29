@@ -4,11 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\UserWorkout;
 use App\Models\Workout;
+use App\Services\UserNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class UserWorkoutController extends Controller
 {
+    public function __construct(protected UserNotificationService $notifications) {}
+
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -96,6 +99,8 @@ public function updateProgress(Request $request, $id)
             'completed_at' => now(),
             'status' => 'completed',
         ]);
+
+        $this->notifications->checkWorkoutMilestones($user->id);
 
         return response()->json([
             'message' => 'Workout completed',

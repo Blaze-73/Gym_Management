@@ -3,42 +3,26 @@
 namespace Database\Seeders;
 
 use App\Models\Plan;
+use App\Support\PlanCatalog;
 use Illuminate\Database\Seeder;
 
 class PlanSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $plans = [
-            [
-                'name' => 'Basic Monthly',
-                'price' => 169.99,
-                'duration' => 30,
-            ],
-            [
-                'name' => 'Premium Monthly',
-                'price' => 249.99,
-                'duration' => 30,
-            ],
-            [
-                'name' => 'Annual VIP',
-                'price' => 1499.99,
-                'duration' => 365,
-            ],
-            [
-                'name' => 'Weekly Pass',
-                'price' => 49.99,
-                'duration' => 7,
-            ],
-        ];
-
-        foreach ($plans as $plan) {
-            Plan::create($plan);
+        foreach (PlanCatalog::definitions() as $id => $def) {
+            Plan::updateOrCreate(['id' => $id], [
+                'name' => $def['name'],
+                'price' => $def['price'],
+                'duration' => $def['duration'],
+                'tag' => $def['tag'],
+                'period' => $def['period'],
+                'popular' => $def['popular'],
+                'features' => $def['features'],
+                'entitlements' => $def['entitlements'],
+            ]);
         }
 
-        echo "✅ " . count($plans) . " gym plans created\n";
+        echo "✅ Plans seeded with tier entitlements (S-Tier / Alpha / Interstellar)\n";
     }
 }

@@ -10,9 +10,19 @@ class Plan extends Model
         'name',
         'price',
         'duration',
-        'features',
+        'tag',
+        'period',
         'popular',
-        'savings'
+        'features',
+        'entitlements',
+        'savings',
+    ];
+
+    protected $casts = [
+        'price' => 'decimal:2',
+        'popular' => 'boolean',
+        'features' => 'array',
+        'entitlements' => 'array',
     ];
 
 public function membership(){
